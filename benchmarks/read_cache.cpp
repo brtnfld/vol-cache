@@ -95,9 +95,9 @@ void clear_cache(char *rank) {
     char iters[255];
     char ranks[255];
     int2char(i, iters);
-    strcat(fname, iters);
-    strcat(fname, ".dat");
-    strcat(fname, rank);
+    strncat(fname, iters, sizeof(fname) - strlen(fname) - 1);
+    strncat(fname, ".dat", sizeof(fname) - strlen(fname) - 1);
+    strncat(fname, rank, sizeof(fname) - strlen(fname) - 1);
     int fd;
     if (access(fname, F_OK) == -1) {
       fd = open(fname, O_CREAT | O_RDWR | O_TRUNC,
