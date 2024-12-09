@@ -5735,9 +5735,12 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
     memcpy(group->H5DRMM->mpi, o->H5DRMM->mpi, sizeof(MPI_INFO));
     if (group->H5LS->path != NULL) {
       strcpy(group->H5DRMM->cache->path, o->H5DRMM->cache->path); // create
-      strcat(group->H5DRMM->cache->path, "/");
-      strcat(group->H5DRMM->cache->path, name);
-      strcat(group->H5DRMM->cache->path, "/");
+      size_t remaining_size = sizeof(group->H5DRMM->cache->path) - strlen(group->H5DRMM->cache->path) - 1;
+      strncat(group->H5DRMM->cache->path, "/", remaining_size);
+      remaining_size = sizeof(group->H5DRMM->cache->path) - strlen(group->H5DRMM->cache->path) - 1;
+      strncat(group->H5DRMM->cache->path, name, remaining_size);
+      remaining_size = sizeof(group->H5DRMM->cache->path) - strlen(group->H5DRMM->cache->path) - 1;
+      strncat(group->H5DRMM->cache->path, "/", remaining_size);
 #ifndef NDEBUG
       LOG_DEBUG(-1, "group cache created: %s", group->H5DRMM->cache->path);
 #endif
