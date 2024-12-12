@@ -144,16 +144,21 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     linenum++;
     if (line[0] == '#')
       continue;
-    if (sscanf(line, "%[^:]:%s", ip, mac) != 2) {
+    if (sscanf(line, "%[^:]:%255s", ip, mac) != 2) {
       if (RANK == io_node())
         fprintf(stderr, "Syntax error, line %d\n", linenum);
+      continue;
+    }
+    if (strlen(ip) >= 256 || strlen(mac) >= 256) {
+      if (RANK == io_node())
+        fprintf(stderr, "Input too long, line %d\n", linenum);
       continue;
     }
     if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH"))
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
-        strcpy(LS->path, mac);
+        snprintf(LS->path, 255, "%s", mac);
       }
 
     else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
