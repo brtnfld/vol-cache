@@ -97,7 +97,13 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    LOG_ERROR(-1, "unknown cache replacement type: %s\n", str);
+    char error_msg[256];
+    if (strlen(str) < 200) {
+        snprintf(error_msg, sizeof(error_msg), "unknown cache replacement type: %s\n", str);
+    } else {
+        snprintf(error_msg, sizeof(error_msg), "unknown cache replacement type: string too long to display\n");
+    }
+    LOG_ERROR(-1, "%s", error_msg);
     return FAIL;
   }
 }
@@ -132,7 +138,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   }
   FILE *file = fopen(fname, "r");
   LS->path = (char *)malloc(255);
-  strcpy(LS->path, "./");
+  strncpy(LS->path, "./", 254);
+  LS->path[254] = '\0';
   LS->mspace_total = 137438953472;
   strcpy(LS->type, "SSD");
   strcpy(LS->scope, "LOCAL");
@@ -171,9 +178,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     else if (!strcmp(ip, "HDF5_CACHE_WRITE_BUFFER_SIZE"))
       LS->write_buffer_size = (hsize_t)atof(mac);
     else if (!strcmp(ip, "HDF5_CACHE_STORAGE_TYPE")) {
-      strcpy(LS->type, mac);
+      strncpy(LS->type, mac, sizeof(LS->type) - 1);
+      LS->type[sizeof(LS->type) - 1] = '\0';
     } else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SCOPE")) {
-      strcpy(LS->scope, mac);
+      strncpy(LS->scope, mac, sizeof(LS->scope) - 1);
+      LS->scope[sizeof(LS->scope) - 1] = '\0';
     } else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
