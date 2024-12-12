@@ -99,9 +99,11 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else {
     char error_msg[256];
     if (strlen(str) < 200) {
-        snprintf(error_msg, sizeof(error_msg), "unknown cache replacement type: %s\n", str);
+      snprintf(error_msg, sizeof(error_msg),
+               "unknown cache replacement type: %s\n", str);
     } else {
-        snprintf(error_msg, sizeof(error_msg), "unknown cache replacement type: string too long to display\n");
+      snprintf(error_msg, sizeof(error_msg),
+               "unknown cache replacement type: string too long to display\n");
     }
     LOG_ERROR(-1, "%s", error_msg);
     return FAIL;
