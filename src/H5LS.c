@@ -59,8 +59,10 @@
 extern int RANK;
 extern int NPROC;
 
+#define MAX_TRUNC_MSG_LEN 128
 #define ERROR_MSG_SIZE 256
 char error_msg[ERROR_MSG_SIZE];
+char truncated_msg[MAX_TRUNC_MSG_LEN];
 
 /*
    Get the corresponding mmap function struct based on the type of node local
@@ -78,13 +80,18 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-    char truncated_type[128];
-    strncpy(truncated_type, type, sizeof(truncated_type) - 1);
-    truncated_type[sizeof(truncated_type) - 1] = '\0';
-    snprintf(error_msg, ERROR_MSG_SIZE,
-             "I don't know the type of storage: %s\n"
-             "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
-             truncated_type);
+
+    size_t copy_len = strlcpy(truncated_msg, type, sizeof(truncated_msg));
+    if (copy_len >= MAX_TRUNC_MSG_LEN) {
+      LOG_WARN(-1,"Storage type string truncated");
+    }
+    int ret = snprintf(error_msg, ERROR_MSG_SIZE,
+                       "I don't know the type of storage: %s\n"
+                       "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
+                       truncated_msg);
+    if (ret < 0 || ret >= ERROR_MSG_SIZE) {
+      LOG_WARN(-1, "Storage type string truncated");
+    }
     LOG_ERROR(-1, "%s", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 111);
   }
