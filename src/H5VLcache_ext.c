@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <libgen.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -955,7 +956,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   int called = 0;
   MPI_Initialized(&called);
   if (called == 1) {
-    int provided = 0;
+    provided = 0;
     MPI_Query_thread(&provided);
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
     MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
@@ -967,7 +968,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
       MPI_Abort(MPI_COMM_WORLD, 1);
     }
   } else {
-    int provided = 0;
+    provided = 0;
     MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
     MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
@@ -1315,11 +1316,18 @@ static herr_t native_vol_info(void **_info) {
   H5VL_cache_ext_info_t *info;
   unsigned under_vol_value;
   const char *under_vol_info_start, *under_vol_info_end;
-  hid_t under_vol_id;
+  hid_t under_vol_id = H5I_INVALID_HID;
   void *under_vol_info = NULL;
 
   /* Retrieve the underlying VOL connector value and info */
-  sscanf(str, "under_vol=%u;", &under_vol_value);
+  if (sscanf(str, "under_vol=%u;", &under_vol_value) != 1) {
+    LOG_ERROR(
+        -1,
+        "Failed to parse under_vol value; make sure you have"
+        "             'config=...;under_vol=...' in your HDF5_VOL_CONNECTOR "
+        "setup");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
   under_vol_id = H5VLregister_connector_by_value(
       (H5VL_class_value_t)under_vol_value, H5P_DEFAULT);
 
@@ -1395,7 +1403,14 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
         "setup");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
-  sscanf(lasts, "under_vol=%u;", &under_vol_value);
+  if (sscanf(lasts, "under_vol=%u;", &under_vol_value) != 1) {
+    LOG_ERROR(
+        -1,
+        "Failed to parse under_vol value; make sure you have"
+        "             'config=...;under_vol=...' in your HDF5_VOL_CONNECTOR "
+        "setup");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
   under_vol_id = H5VLregister_connector_by_value(
       (H5VL_class_value_t)under_vol_value, H5P_DEFAULT);
   under_vol_info_start = strchr(lasts, '{');
@@ -2038,7 +2053,6 @@ static herr_t H5VL_cache_ext_dataset_mmap_remap(void *obj) {
   hsize_t ss = round_page(dset->H5DRMM->dset.size);
   if (strcmp(dset->H5LS->type, "MEMORY") != 0) {
     // msync(dset->H5DRMM->mmap->buf, ss, MS_SYNC);
-    double t0 = MPI_Wtime();
     munmap(dset->H5DRMM->mmap->buf, ss);
 #ifdef __linux__
     posix_fadvise(dset->H5DRMM->mmap->fd, 0, ss, POSIX_FADV_DONTNEED);
@@ -5388,8 +5402,6 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
 
   file_args_t *args = (file_args_t *)file_args;
   const char *name = args->name;
-  herr_t ret_value;
-  hsize_t size_f;
   H5VL_cache_ext_t *file = (H5VL_cache_ext_t *)obj;
 
   H5VL_cache_ext_info_t *info;
@@ -5545,7 +5557,6 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
 
 static herr_t remove_file_cache_on_local_storage(void *file, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
-  herr_t ret_value;
   if (o->write_cache) {
     H5VL_cache_ext_file_wait(file);
     o->H5LS->mmap_cls->remove_write_mmap(o->H5DWMM->mmap, 0);
@@ -5597,7 +5608,6 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
 #endif
   dset_args_t *args = (dset_args_t *)dset_args;
   const char *name = args->name;
-  herr_t ret_value;
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *)obj;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset->parent;
   H5VL_cache_ext_t *p = o;
@@ -5771,7 +5781,6 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
 #endif
   group_args_t *args = (group_args_t *)group_args;
   const char *name = args->name;
-  herr_t ret_value;
   H5VL_cache_ext_t *group = (H5VL_cache_ext_t *)obj;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)group->parent;
   if (group->read_cache) {
@@ -6092,8 +6101,6 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
   LOG_INFO(-1, "VOL File cache create ");
 #endif
   file_args_t *args = (file_args_t *)file_args;
-  herr_t ret_value;
-  hsize_t size_f;
 
   H5VL_cache_ext_t *file = (H5VL_cache_ext_t *)obj;
   // hid_t fapl_id = args->fapl_id;
@@ -6224,7 +6231,6 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
   // set up read cache: obj, dset object
   // loc - where is the dataset located - group or file object
   dset_args_t *args = (dset_args_t *)dset_args;
-  herr_t ret_value;
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *)obj;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset->parent;
   while (o->parent != NULL)
@@ -6236,7 +6242,6 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
     dset->H5DWMM->mpi = o->H5DWMM->mpi;
     dset->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
     dset->H5DWMM->io = o->H5DWMM->io;
-    hsize_t size_f;
     char fname[255];
 
     file_get_name(o->under_object, o->under_vol_id, sizeof(fname), fname,
@@ -6425,7 +6430,8 @@ static herr_t flush_data_from_global_storage(void *current_request,
   void *req2 = NULL;
   hid_t dxpl_id = H5Pcopy(task->xfer_plist_id);
   if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-    int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
+    double delay_time_double = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
+    int delay_time = (int)round(delay_time_double);
     // H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
     H5Pset_dxpl_delay(dxpl_id, delay_time);
   }
@@ -6476,7 +6482,6 @@ static herr_t flush_data_from_global_storage(void *current_request,
   // H5VL_async_start();
   if (getenv("HDF5_ASYNC_DELAY_TIME"))
     H5Pset_dxpl_delay(dxpl_id, 0);
-  H5VL_request_status_t status;
   o->H5LS->previous_write_req = task->req;
   // building next task
 #ifndef NDEBUG
@@ -6520,7 +6525,6 @@ static herr_t remove_dataset_cache_on_global_storage(void *dset, void **req) {
 
 static herr_t remove_file_cache_on_global_storage(void *file, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
-  herr_t ret_value;
   if (o->write_cache) {
     H5VL_cache_ext_file_wait(file);
     H5Fclose(o->hd_glob);
