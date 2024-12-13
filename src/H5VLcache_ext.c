@@ -2151,7 +2151,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
-      //hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * nblock *
+      // hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * nblock *
       //                            nsample_per_block);
       // We only assume prefetching on dataset, not multiple.
       // void *ptr = &p[offset];
