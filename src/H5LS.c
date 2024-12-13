@@ -222,7 +222,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    snprintf(error_msg, ERROR_MSG_SIZE, "H5LSset: path %.255s does not exist", LS->path);
+    snprintf(error_msg, ERROR_MSG_SIZE, "H5LSset: path %.255s does not exist",
+             LS->path);
     LOG_ERROR(-1, "%s\n", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 112);
   }
@@ -416,9 +417,11 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
 #ifndef NDEBUG
-    snprintf(error_msg, ERROR_MSG_SIZE, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
+    snprintf(error_msg, ERROR_MSG_SIZE, "Claimed: %.4f GiB\n",
+             size / 1024. / 1024. / 1024.);
     LOG_DEBUG(-1, "%s", error_msg);
-    snprintf(error_msg, ERROR_MSG_SIZE, "LS->space left: %.4f GiB\n", LS->mspace_left / 1024. / 1024 / 1024.);
+    snprintf(error_msg, ERROR_MSG_SIZE, "LS->space left: %.4f GiB\n",
+             LS->mspace_left / 1024. / 1024 / 1024.);
     LOG_DEBUG(-1, "%s", error_msg);
 #endif
     return SUCCEED;
@@ -440,7 +443,8 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
       stay = tmp;
       if (mspace < size) {
 #ifndef NDEBUG
-        snprintf(error_msg, ERROR_MSG_SIZE, "mspace (bytes): %f - %lu\n", mspace, size);
+        snprintf(error_msg, ERROR_MSG_SIZE, "mspace (bytes): %f - %lu\n",
+                 mspace, size);
         LOG_DEBUG(-1, "%s", error_msg);
 #endif
         return FAIL;

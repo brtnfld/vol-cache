@@ -1450,16 +1450,16 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   LOG_INFO(-1, "=============================");
   LOG_INFO(-1, "        config file: %s", p->fconfig);
 
-  int ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage path: %s", p->H5LS->path);
+  int ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage path: %s",
+                     p->H5LS->path);
   if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
     LOG_WARN(-1, "Log Error when formatting storage path message");
   } else {
     LOG_INFO(-1, "%s", log_buffer);
   }
 
-  ret =
-      snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage size: %.4f GiB",
-               p->H5LS->mspace_total / 1024. / 1024. / 1024.);
+  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage size: %.4f GiB",
+                 p->H5LS->mspace_total / 1024. / 1024. / 1024.);
   if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
     LOG_WARN(-1, "Log Error when formatting storage size message");
   } else {
@@ -1474,14 +1474,16 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     LOG_INFO(-1, "%s", log_buffer);
   }
 
-  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage type: %s", p->H5LS->type);
+  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage type: %s",
+                 p->H5LS->type);
   if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
     LOG_WARN(-1, "Log Error when formatting storage type message");
   } else {
     LOG_INFO(-1, "%s", log_buffer);
   }
 
-  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "      storage scope: %s", p->H5LS->scope);
+  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "      storage scope: %s",
+                 p->H5LS->scope);
   if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
     LOG_WARN(-1, "Log Error when formatting storage scope message");
   } else {
