@@ -1961,7 +1961,7 @@ static hid_t dataset_get_dapl(void *dset, hid_t driver_id, hid_t dxpl_id,
 /* So far this does not work */
 static hid_t group_get_gapl(void *group, hid_t driver_id, hid_t dxpl_id,
                             void **req) {
-  H5VL_dataset_get_args_t vol_cb_args;
+  // H5VL_dataset_get_args_t vol_cb_args;
 #ifndef NDEBUG
   LOG_WARN(-1, "Getting gapl from the group object "
                "    is not implemented yet, returning H5P_DEFAULT");
@@ -2060,7 +2060,6 @@ static herr_t H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     fsync(dset->H5DRMM->mmap->fd);
     close(dset->H5DRMM->mmap->fd);
     MPI_Win_free(&dset->H5DRMM->mpi->win);
-    double t1 = MPI_Wtime();
 
     char tmp[252];
     strcpy(tmp, dset->H5DRMM->mmap->fname);
@@ -2080,7 +2079,6 @@ static herr_t H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     MPI_Win_create(dset->H5DRMM->mmap->buf, ss, dset->H5DRMM->dset.esize,
                    MPI_INFO_NULL, dset->H5DRMM->mpi->comm,
                    &dset->H5DRMM->mpi->win);
-    double t2 = MPI_Wtime();
   }
   return SUCCEED;
 }
@@ -2351,7 +2349,6 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       H5Sclose(fs_cpy);
     }
     if (ret_value == 0) {
-      hsize_t ss = round_page(dset->H5DRMM->dset.size);
       if (dset->H5LS->path != NULL)
         msync(dset->H5DRMM->mmap->buf, dset->H5DRMM->dset.size, MS_SYNC);
       dset->H5DRMM->io->dset_cached = true;
@@ -3074,7 +3071,6 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
   }
 
   if (o->write_cache) {
-    double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status;
     while ((o->num_request_dataset > 0) &&
            (o->H5DWMM->io->current_request != NULL &&
@@ -3156,7 +3152,6 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
       o->H5DWMM->io->fusion_data_size = 0.0;
       o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next;
     }
-    double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status;
     while ((o->H5DWMM->io->current_request != NULL) &&
            (o->H5DWMM->io->num_request > 0)) {
@@ -3236,13 +3231,11 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     // printf("task-current-type: %d\n", p->async_close_task_current->type);
     if (p->async_pause)
       H5Pset_dxpl_pause(dxpl_id, p->async_pause);
-    double tt0 = MPI_Wtime();
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id,
                                   &p->async_close_task_list->req);
     H5Pset_dxpl_pause(dxpl_id, false);
 
     // assert(p->async_close_task_list->req!=NULL);
-    double tt1 = MPI_Wtime();
     /*
         if (write_req !=NULL) {
           printf(" set dependenace....");
@@ -5430,7 +5423,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
 #endif
 
     // getting mpi info
-    MPI_Comm comm, comm_dup;
+    MPI_Comm comm;
     MPI_Info mpi_info;
     H5Pget_fapl_mpio(args->fapl_id, &comm, &mpi_info);
     MPI_Comm_dup(comm, &file->H5DWMM->mpi->comm);
@@ -5888,7 +5881,6 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
 #ifndef NDEBUG
   LOG_INFO(-1, "caching data to local storage using MPI_Put");
 #endif
-  hsize_t bytes = get_buf_size(mem_space_id, mem_type_id);
   get_samples_from_filespace(file_space_id, &o->H5DRMM->dset.batch,
                              &o->H5DRMM->dset.contig_read);
   o->H5DRMM->mmap->tmp_buf = (void *)buf;
@@ -6070,7 +6062,6 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
   }
   // for (size_t i = 0; i < count; i++)
   ((H5VL_cache_ext_t *)task->dataset_obj[0])->num_request_dataset++;
-  H5VL_request_status_t status;
   o->H5DWMM->io->num_request++;
   // building next task
 #ifndef NDEBUG
@@ -6124,7 +6115,7 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
                     "Remove first!");
       return FAIL;
     }
-    MPI_Comm comm, comm_dup;
+    MPI_Comm comm;
     MPI_Info mpi_info;
 
     H5Pget_fapl_mpio(args->fapl_id, &comm, &mpi_info);
