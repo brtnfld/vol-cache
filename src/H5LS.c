@@ -145,9 +145,12 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     MPI_Abort(MPI_COMM_WORLD, 100);
   }
   FILE *file = fopen(fname, "r");
-  LS->path = (char *)malloc(256);
-  strncpy(LS->path, "./", 255);
-  LS->path[255] = '\0';
+  LS->path = (char *)calloc(256, sizeof(char));
+  if (LS->path == NULL) {
+    LOG_ERROR(-1, "Memory allocation failed for LS->path");
+    MPI_Abort(MPI_COMM_WORLD, 100);
+  }
+  snprintf(LS->path, 256, "./");
   LS->mspace_total = 137438953472;
   strcpy(LS->type, "SSD");
   strcpy(LS->scope, "LOCAL");
@@ -175,7 +178,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
-        snprintf(LS->path, 256, "%s", mac);
+        snprintf(LS->path, 256, "%.255s", mac);
       }
 
     else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
@@ -197,8 +200,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
+      char temp_ip[256];
+      strncpy(temp_ip, ip, sizeof(temp_ip) - 1);
+      temp_ip[sizeof(temp_ip) - 1] = '\0';
       snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s",
-               ip);
+               temp_ip);
       LOG_WARN(-1, "%s", error_msg);
     }
   }
@@ -216,7 +222,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    LOG_ERROR(-1, "H5LSset: path %s does not exist\n", LS->path);
+    snprintf(error_msg, ERROR_MSG_SIZE, "H5LSset: path %.255s does not exist", LS->path);
+    LOG_ERROR(-1, "%s\n", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 112);
   }
 }
@@ -409,9 +416,10 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
 #ifndef NDEBUG
-    LOG_DEBUG(-1, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
-    LOG_DEBUG(-1, "LS->space left: %.4f GiB\n",
-              LS->mspace_left / 1024. / 1024 / 1024.);
+    snprintf(error_msg, ERROR_MSG_SIZE, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
+    LOG_DEBUG(-1, "%s", error_msg);
+    snprintf(error_msg, ERROR_MSG_SIZE, "LS->space left: %.4f GiB\n", LS->mspace_left / 1024. / 1024 / 1024.);
+    LOG_DEBUG(-1, "%s", error_msg);
 #endif
     return SUCCEED;
   } else {
@@ -432,7 +440,8 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
       stay = tmp;
       if (mspace < size) {
 #ifndef NDEBUG
-        LOG_DEBUG(-1, "mspace (bytes): %f - %lu\n", mspace, size);
+        snprintf(error_msg, ERROR_MSG_SIZE, "mspace (bytes): %f - %lu\n", mspace, size);
+        LOG_DEBUG(-1, "%s", error_msg);
 #endif
         return FAIL;
       } else {

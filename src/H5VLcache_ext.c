@@ -1450,9 +1450,14 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   LOG_INFO(-1, "=============================");
   LOG_INFO(-1, "        config file: %s", p->fconfig);
 
-  LOG_INFO(-1, "       storage path: %s", p->H5LS->path);
+  int ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage path: %s", p->H5LS->path);
+  if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
+    LOG_WARN(-1, "Log Error when formatting storage path message");
+  } else {
+    LOG_INFO(-1, "%s", log_buffer);
+  }
 
-  int ret =
+  ret =
       snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage size: %.4f GiB",
                p->H5LS->mspace_total / 1024. / 1024. / 1024.);
   if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
@@ -1469,9 +1474,19 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     LOG_INFO(-1, "%s", log_buffer);
   }
 
-  LOG_INFO(-1, "       storage type: %s", p->H5LS->type);
+  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage type: %s", p->H5LS->type);
+  if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
+    LOG_WARN(-1, "Log Error when formatting storage type message");
+  } else {
+    LOG_INFO(-1, "%s", log_buffer);
+  }
 
-  LOG_INFO(-1, "      storage scope: %s", p->H5LS->scope);
+  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "      storage scope: %s", p->H5LS->scope);
+  if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
+    LOG_WARN(-1, "Log Error when formatting storage scope message");
+  } else {
+    LOG_INFO(-1, "%s", log_buffer);
+  }
 
   LOG_INFO(-1, " replacement_policy: %d", (int)p->H5LS->replacement_policy);
 
@@ -2506,12 +2521,12 @@ static herr_t H5VL_cache_ext_dataset_read(size_t count, void *dset[],
       ret_value =
           H5VLdataset_read(count, obj, o->under_vol_id, mem_type_id,
                            mem_space_id, file_space_id, plist_id, buf, req);
-      for (size_t i = 0; i < count; i++)
+      for (i = 0; i < count; i++)
         o->H5LS->cache_io_cls->write_data_to_cache2(
             dset[i], mem_type_id[i], mem_space_id[i], file_space_id[i],
             plist_id, buf[i], req);
     } else {
-      for (size_t i = 0; i < count; i++)
+      for (i = 0; i < count; i++)
         ret_value = o->H5LS->cache_io_cls->read_data_from_cache(
             dset[i], mem_type_id[i], mem_space_id[i], file_space_id[i],
             plist_id, buf[i], req);
@@ -3129,7 +3144,8 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
-    LOG_DEBUG(-1, "ESwait time: %.5f seconds", t1 - t0);
+    snprintf(log_buffer, LOG_BUFFER_SIZE, "ESwait time: %.5f seconds", t1 - t0);
+    LOG_DEBUG(-1, "%s", log_buffer);
 #endif
   }
   return 0;
@@ -3283,7 +3299,8 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   double t1 = MPI_Wtime();
 #ifndef NDEBUG
 
-  LOG_DEBUG(-1, "H5VLdataset_close time: %f", t1 - t0);
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "H5VLdataset_close time: %f", t1 - t0);
+  LOG_DEBUG(-1, "%s", log_buffer);
 
 #endif
   /* Check for async request */
@@ -4037,19 +4054,19 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
       }
 
       if (o->async_close && o->async_pause) {
-        object_close_task_t *p =
+        object_close_task_t *p1 =
             (object_close_task_t *)o->async_close_task_current;
 #ifndef NDEBUG
         LOG_INFO(-1, "starting async close task");
 #endif
         int n = 0;
-        while (p != NULL && p->req != NULL) {
+        while (p1 != NULL && p1->req != NULL) {
 #ifndef NDEBUG
-          LOG_DEBUG(-1, "starting async close task: %d, %d", n, p->type);
+          LOG_DEBUG(-1, "starting async close task: %d, %d", n, p1->type);
 
 #endif
-          H5async_start(p->req);
-          p = p->next;
+          H5async_start(p1->req);
+          p1 = p1->next;
           n++;
         }
       }
@@ -6412,7 +6429,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   // question: How to combine these two calls and make them dependent from each
   // other
   hsize_t bytes;
-  for (size_t i = 0; i < count; i++) {
+  for (i = 0; i < count; i++) {
     bytes = get_buf_size(task->mem_space_id[i], task->mem_type_id[i]);
     task->buf[i] = malloc(bytes);
   }
