@@ -84,7 +84,7 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     snprintf(error_msg, ERROR_MSG_SIZE,
              "I don't know the type of storage: %s\n"
              "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
-              truncated_type);
+             truncated_type);
     LOG_ERROR(-1, "%s", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 111);
   }
