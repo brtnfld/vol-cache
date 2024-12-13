@@ -59,6 +59,9 @@
 extern int RANK;
 extern int NPROC;
 
+#define ERROR_MSG_SIZE 256
+char error_msg[ERROR_MSG_SIZE];
+
 /*
    Get the corresponding mmap function struct based on the type of node local
    storage The user can modify this function to other storage
@@ -75,10 +78,14 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-    LOG_ERROR(-1,
-              "I don't know the type of storage: %s\n"
-              "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
-              type);
+    char truncated_type[128];
+    strncpy(truncated_type, type, sizeof(truncated_type) - 1);
+    truncated_type[sizeof(truncated_type) - 1] = '\0';
+    snprintf(error_msg, ERROR_MSG_SIZE,
+             "I don't know the type of storage: %s\n"
+             "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
+             truncated_type);
+    LOG_ERROR(-1, "%s", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 111);
   }
   return p;
@@ -97,12 +104,11 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    char error_msg[256];
     if (strlen(str) < 200) {
-      snprintf(error_msg, sizeof(error_msg),
+      snprintf(error_msg, ERROR_MSG_SIZE,
                "unknown cache replacement type: %s\n", str);
     } else {
-      snprintf(error_msg, sizeof(error_msg),
+      snprintf(error_msg, ERROR_MSG_SIZE,
                "unknown cache replacement type: string too long to display\n");
     }
     LOG_ERROR(-1, "%s", error_msg);
@@ -139,9 +145,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     MPI_Abort(MPI_COMM_WORLD, 100);
   }
   FILE *file = fopen(fname, "r");
-  LS->path = (char *)malloc(255);
-  strncpy(LS->path, "./", 254);
-  LS->path[254] = '\0';
+  LS->path = (char *)malloc(256);
+  strncpy(LS->path, "./", 255);
+  LS->path[255] = '\0';
   LS->mspace_total = 137438953472;
   strcpy(LS->type, "SSD");
   strcpy(LS->scope, "LOCAL");
@@ -153,11 +159,13 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     linenum++;
     if (line[0] == '#')
       continue;
-    if (sscanf(line, "%[^:]:%255s", ip, mac) != 2) {
+    if (sscanf(line, "%255[^:]:%255s", ip, mac) != 2) {
       if (RANK == io_node())
         fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
     }
+    ip[255] = '\0';
+    mac[255] = '\0';
     if (strlen(ip) >= 256 || strlen(mac) >= 256) {
       if (RANK == io_node())
         fprintf(stderr, "Input too long, line %d\n", linenum);
@@ -167,7 +175,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
-        snprintf(LS->path, 255, "%s", mac);
+        snprintf(LS->path, 256, "%s", mac);
       }
 
     else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
@@ -189,7 +197,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      LOG_WARN(-1, "Unknown configuration setup:", ip);
+      snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s",
+               ip);
+      LOG_WARN(-1, "%s", error_msg);
     }
   }
   if (LS->mspace_total < LS->write_buffer_size) {
