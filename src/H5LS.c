@@ -216,7 +216,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    LOG_ERROR(-1, "H5LSset: path %s does not exist\n", LS->path);
+    int ret = snprintf(error_msg, ERROR_MSG_SIZE, "H5LSset: path %s does not exist\n", LS->path);
+    if (ret < 0 || ret >= ERROR_MSG_SIZE) {
+      LOG_WARN(-1, "path error message truncated");
+    }
+    LOG_ERROR(-1, "%s", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 112);
   }
 }
