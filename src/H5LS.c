@@ -156,11 +156,13 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     linenum++;
     if (line[0] == '#')
       continue;
-    if (sscanf(line, "%[^:]:%255s", ip, mac) != 2) {
+    if (sscanf(line, "%255[^:]:%255s", ip, mac) != 2) {
       if (RANK == io_node())
         fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
     }
+    ip[255] = '\0';
+    mac[255] = '\0';
     if (strlen(ip) >= 256 || strlen(mac) >= 256) {
       if (RANK == io_node())
         fprintf(stderr, "Input too long, line %d\n", linenum);
@@ -192,7 +194,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      LOG_WARN(-1, "Unknown configuration setup: %s", ip);
+      snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s", ip);
+      LOG_WARN(-1, "%s", error_msg);
     }
   }
   if (LS->mspace_total < LS->write_buffer_size) {
