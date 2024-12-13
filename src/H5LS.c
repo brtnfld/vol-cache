@@ -59,7 +59,7 @@
 extern int RANK;
 extern int NPROC;
 
-#define ERROR_MSG_SIZE = 256
+#define ERROR_MSG_SIZE 256
 char error_msg[ERROR_MSG_SIZE];
 
 /*
