@@ -83,7 +83,7 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
 
     size_t copy_len = strlcpy(truncated_msg, type, sizeof(truncated_msg));
     if (copy_len >= MAX_TRUNC_MSG_LEN) {
-      LOG_WARN(-1,"Storage type string truncated");
+      LOG_WARN(-1, "Storage type string truncated");
     }
     int ret = snprintf(error_msg, ERROR_MSG_SIZE,
                        "I don't know the type of storage: %s\n"
