@@ -60,7 +60,7 @@ extern int RANK;
 extern int NPROC;
 
 #define MAX_TRUNC_MSG_LEN 128
-#define ERROR_MSG_SIZE 256
+#define ERROR_MSG_SIZE 283
 char error_msg[ERROR_MSG_SIZE];
 char truncated_msg[MAX_TRUNC_MSG_LEN];
 
